@@ -1,52 +1,60 @@
-import path from 'path';
-import fs from 'fs';
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import express from "express";
+import { Todo } from "./models/todo.model.js";
+import cors from "cors";
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+dotenv.config();
 
-// faylin yerlesdiyi yerden yeni bir qovluq ve fayl path yaratmaq
-const newPath = path.join(__dirname, 'new', 'new.js');
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("MongoDB connected successfully");
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
+    process.exit(1);
+  }
+}
 
-// command run olunan yerden yeni bir qovluq ve fayl path yaratmaq
-const resolvedPath = path.resolve('new', 'new.js');
+const app = express();
+app.use(cors());
 
-// faylin adi
-const fileName = path.basename(newPath)
+app.use(express.json());
 
-// faylin adi, fayl sonlugu olmadan
-const fileNameWithoutExt = path.basename(newPath, '.js')
-
-// fayl sonlugu
-const extensionName = path.extname(newPath)
-
-// pathi ferqli datalara bolmek
-const parsedPath = path.parse(newPath)
-
-// datalardan pathi yaratmaq
-const formattedPath = path.format({
-    root: '/',
-    dir: '/Users/ilkinibadov/Desktop/nodeDemo/new',
-    base: 'new.js',
-    ext: '.js',
-    name: 'new'
-})
-
-// pathin absolute olub olmadigini yoxlamaq
-console.log(path.isAbsolute(resolvedPath))
-
-// fayl pathinde istifade olunan simvol
-const seperator = path.sep
-
-// yeni qovluq ve fayl yaratmaq
-fs.mkdir(path.dirname(newPath), { recursive: true }, (err) => {
-    if (err) {
-        return console.error('Error creating folders:', err);
-    }
-
-    const content = "// This file was created using path.join, __dirname, and recursive folders\nconsole.log('Hello World!');";
-    fs.writeFile(newPath, content, 'utf8', (err) => {
-        if (err) {
-            return console.error('Error creating file:', err);
-        }
-        console.log('File successfully created at:', newPath);
-    });
+app.get("/todos", async (req, res) => {
+  try {
+    const todos = await Todo.find();
+    res.status(200).json(todos);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
+
+app.post("/todos/new", async (req, res) => {
+  try {
+    const { title, description } = req.body;
+    const newTodo = new Todo({ title, description });
+    await newTodo.save();
+    res.status(201).json(newTodo);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.delete("/todos/delete/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedTodo = await Todo.findByIdAndDelete(id);
+    if (!deletedTodo) {
+      return res.status(404).json({ message: "Todo not found" });
+    }
+    res.status(200).json({ message: "Todo deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.listen(process.env.PORT || 5000, () => {
+  console.log(`Server is running on port ${process.env.PORT || 5000}`);
+  connectDB()
+})

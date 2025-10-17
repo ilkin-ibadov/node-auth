@@ -18,6 +18,11 @@ const todoSchema = new mongoose.Schema({
     completed: {
         type: Boolean,
         default: false,
+    },
+    author: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: [true, "Author is required"],
     }
 }, { timestamps: true })
 

@@ -2,7 +2,7 @@ import { Todo } from "../models/todo.model.js";
 
 export const getAllTodos = async (req, res) => {
     try {
-        const todos = await Todo.find();
+        const todos = await Todo.find({ author: req.user.id });
         res.status(200).json(todos);
     } catch (error) {
         res.status(500).json({ message: "Server error" });
@@ -12,7 +12,7 @@ export const getAllTodos = async (req, res) => {
 export const getTodoById = async (req, res) => {
     try {
         const { id } = req.params;
-        const todo = await Todo.findById(id);
+        const todo = await Todo.findOne({ _id: id, author: req.user.id });
         if (!todo) {
             return res.status(404).json({ message: "Todo not found" });
         }
@@ -37,14 +37,16 @@ export const updateTodo = async (req, res) => {
     try {
         const { id } = req.params;
         const { title, description, completed } = req.body;
-        const updatedTodo = await Todo.findByIdAndUpdate(
-            id,
-            { title, description, completed },
-            { new: true, runValidators: true }
-        );
-        if (!updatedTodo) {
+        const todo = await Todo.findOne({ _id: id, author: req.user.id });
+        if (!todo) {
             return res.status(404).json({ message: "Todo not found" });
         }
+
+        todo.title = title || todo.title;
+        todo.description = description || todo.description;
+        todo.completed = completed || todo.completed;
+        await todo.save()
+
         res.status(200).json(updatedTodo);
     } catch (error) {
         console.error(error);
@@ -52,6 +54,19 @@ export const updateTodo = async (req, res) => {
 }
 
 export const deleteTodo = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedTodo = await Todo.findByIdAndDelete(id);
+        if (!deletedTodo) {
+            return res.status(404).json({ message: "Todo not found" });
+        }
+        res.status(200).json({ message: "Todo deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+}
+
+export const deleteTodoWithId = async (req, res) => {
     try {
         const { id } = req.params;
         const deletedTodo = await Todo.findByIdAndDelete(id);

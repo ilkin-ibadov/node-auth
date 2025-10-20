@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import express from "express";
-import cors from "cors";
 import todoRoutes from "./routes/todo.route.js"
 import authRoutes from "./routes/auth.route.js"
+import { protect } from "./middleware/auth.middleware.js";
 
 dotenv.config();
 
@@ -18,11 +18,10 @@ const connectDB = async () => {
 }
 
 const app = express();
-app.use(cors());
 
 app.use(express.json());
 
-app.use("/api/todos", todoRoutes);
+app.use("/api/todos", protect, todoRoutes);
 app.use("/api/auth", authRoutes);
 
 app.listen(process.env.PORT || 5000, () => {
